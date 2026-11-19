@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-vip
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: kube-vip
+    app.kubernetes.io/component: control-plane
+spec:
+  hostNetwork: true
+  containers:
+    - name: kube-vip
+      image: {{ required "kubeVip.image is required when kubeVip.enabled=true" .Values.kubeVip.image | quote }}
+      imagePullPolicy: {{ .Values.kubeVip.imagePullPolicy | default "IfNotPresent" | quote }}
+      args:
+        - manager
+      env:
+        - name: vip_arp
+          value: "true"
+        - name: port
+          value: {{ include "capv-cluster.endpointPort" . | quote }}
+        {{- with .Values.kubeVip.interface }}
+        - name: vip_interface
+          value: {{ . | quote }}
+        {{- end }}
+        - name: vip_cidr
+          value: {{ .Values.kubeVip.cidr | default 32 | quote }}
+        - name: cp_enable
+          value: "true"
+        - name: cp_namespace
+          value: kube-system
+        - name: vip_ddns
+          value: "false"
+        - name: svc_enable
+          value: {{ .Values.kubeVip.services.enabled | default false | quote }}
+        - name: svc_leasename
+          value: plndr-svcs-lock
+        - name: svc_election
+          value: "true"
+        - name: vip_leaderelection
+          value: "true"
+        - name: vip_leasename
+          value: plndr-cp-lock
+        - name: vip_leaseduration
+          value: "15"
+        - name: vip_renewdeadline
+          value: "10"
+        - name: vip_retryperiod
+          value: "2"
+        - name: address
+          value: {{ include "capv-cluster.endpointHost" . | quote }}
+        - name: prometheus_server
+          value: :2112
+        {{- range (.Values.kubeVip.extraEnv | default list) }}
+        - name: {{ required "kubeVip.extraEnv[].name is required" .name | quote }}
+          value: {{ required "kubeVip.extraEnv[].value is required" .value | quote }}
+        {{- end }}
+      resources: {}
+      securityContext:
+        capabilities:
+          add:
+            - NET_ADMIN
+            - NET_RAW
+      volumeMounts:
+        - name: kubeconfig
+          mountPath: /etc/kubernetes/admin.conf
+        - name: etchosts
+          mountPath: /etc/hosts
+  volumes:
+    - name: kubeconfig
+      hostPath:
+        path: /etc/kubernetes/admin.conf
+        type: File
+    - name: etchosts
+      hostPath:
+        path: /etc/kube-vip.hosts
+        type: File
+  restartPolicy: Always

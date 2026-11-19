@@ -1,0 +1,30 @@
+{{- range $groupName, $group := .Values.workerNodes }}
+{{- if and $group.machineHealthCheck $group.machineHealthCheck.enabled }}
+{{- if not $group.machineHealthCheck.checks }}
+{{- fail (printf "workerNodes.%s.machineHealthCheck.checks is required when machineHealthCheck.enabled=true" $groupName) }}
+{{- end }}
+{{- $name := include "capv-cluster.childName" (dict "root" $ "suffix" (printf "-%s" $groupName)) }}
+{{- $mhcName := include "capv-cluster.childName" (dict "root" $ "suffix" (printf "-%s-mhc" $groupName)) }}
+---
+apiVersion: cluster.x-k8s.io/v1beta2
+kind: MachineHealthCheck
+metadata:
+  name: {{ $mhcName }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    cluster.x-k8s.io/cluster-name: {{ include "capv-cluster.clusterName" $ | quote }}
+    {{- include "capv-cluster.labels" $ | nindent 4 }}
+spec:
+  clusterName: {{ include "capv-cluster.clusterName" $ | quote }}
+  checks:
+    {{- toYaml $group.machineHealthCheck.checks | nindent 4 }}
+  {{- with $group.machineHealthCheck.remediation }}
+  remediation:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: {{ include "capv-cluster.clusterName" $ | quote }}
+      cluster.x-k8s.io/deployment-name: {{ $name | quote }}
+{{- end }}
+{{- end }}

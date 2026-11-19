@@ -1,0 +1,5 @@
+*.kubeconfig
+*.tgz
+values-local.yaml
+values-local.yml
+values-test.yaml

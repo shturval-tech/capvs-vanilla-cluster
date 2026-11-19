@@ -1,0 +1,18 @@
+apiVersion: v2
+name: capv-cluster
+description: >-
+  Vanilla Cluster API (CAPI) + Cluster API Provider vSphere (CAPV) workload
+  cluster.
+type: application
+version: 0.1.0
+appVersion: "1.36.6"
+keywords:
+  - cluster-api
+  - capi
+  - capv
+  - vsphere
+  - kubernetes
+home: https://cluster-api.sigs.k8s.io/
+sources:
+  - https://github.com/kubernetes-sigs/cluster-api
+  - https://github.com/kubernetes-sigs/cluster-api-provider-vsphere

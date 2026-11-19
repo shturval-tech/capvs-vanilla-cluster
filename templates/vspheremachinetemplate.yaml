@@ -1,0 +1,17 @@
+{{- range $groupName, $group := .Values.workerNodes }}
+{{- $name := include "capv-cluster.childName" (dict "root" $ "suffix" (printf "-%s" $groupName)) }}
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
+kind: VSphereMachineTemplate
+metadata:
+  name: {{ $name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    cluster.x-k8s.io/cluster-name: {{ include "capv-cluster.clusterName" $ | quote }}
+    cluster.x-k8s.io/deployment-name: {{ $name | quote }}
+    {{- include "capv-cluster.labels" $ | nindent 4 }}
+spec:
+  template:
+    spec:
+      {{- include "capv-cluster.machineSpec" (dict "root" $ "group" $group "name" $groupName) | nindent 6 }}
+{{- end }}

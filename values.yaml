@@ -1,0 +1,355 @@
+# =============================================================================
+# capv-cluster — «чистый» Cluster API + CAPV кластер.
+#
+# Чарт создаёт только объекты Cluster API / CAPV.
+#
+# =============================================================================
+
+nameOverride: ""
+
+cluster:
+  # Имя CAPI-кластера. Пусто => Release.Name. Максимум 52 символа
+  # (CAPI добавляет суффикс -kubeconfig).
+  name: ""
+
+  # Версия Kubernetes для control plane и worker-узлов (без префикса v).
+  kubernetesVersion: "1.36.6"
+
+  # Сети кластера. Должны совпадать с настройками CNI.
+  podCIDR: "192.168.0.0/16"
+  serviceCIDR: "10.96.0.0/12"
+  serviceDomain: "cluster.local"
+
+  # Стабильная точка входа в kube-apiserver.
+  #
+  # Это НЕ адрес конкретного master-узла для HA-кластера. Варианты:
+  #   1) внешний L4-балансировщик (HAProxy, F5, NSX ALB, cloud LB) — host = IP/DNS LB;
+  #   2) kube-vip (kubeVip.enabled: true) — host = свободный VIP;
+  #   3) одиночный control plane (replicas: 1) — host = статический IP этого узла
+  #      (или DHCP-резервация). Балансировщик и kube-vip не нужны.
+  #
+  # Подробнее — раздел README «Точка входа API без kube-vip».
+  endpoint:
+    host: "192.0.2.10"   # ЗАМЕНИТЕ: LB/VIP/статический IP единственного master
+    port: 6443
+
+# -----------------------------------------------------------------------------
+# vSphere / CAPV
+# -----------------------------------------------------------------------------
+vsphere:
+  # Адрес vCenter. Можно с портом: vcenter.example.com:443.
+  server: "vcenter.example.com"
+
+  # SHA-1 отпечаток сертификата vCenter (colon-separated).
+  # Пусто => CAPV подключается без проверки TLS. Для production заполните.
+  thumbprint: ""
+
+  username: "administrator@vsphere.local"
+  password: "CHANGE_ME"
+
+  credentials:
+    # Создать Secret с username/password в namespace релиза.
+    # CAPV ожидает ключи username и password.
+    create: true
+    # Использовать существующий Secret вместо создания нового.
+    # Secret должен находиться в namespace релиза.
+    existingSecret: ""
+    # Не удалять созданный Secret при helm uninstall: CAPV использует его,
+    # чтобы удалить VM в vCenter. Удалите Secret вручную после исчезновения
+    # всех Machine.
+    keepOnUninstall: true
+
+  datacenter: "/Datacenter"
+  datastore: "Datastore"
+  folder: "/Datacenter/vm/capi"
+  # Пусто => CAPV использует resource pool по умолчанию для выбранного хоста/кластера.
+  resourcePool: "/Datacenter/host/Cluster/Resources"
+  # VM-шаблон с cloud-init, containerd, kubeadm и kubelet.
+  # Готовые образы: https://github.com/kubernetes-sigs/image-builder
+  template: "ubuntu-2404-capi-template"
+
+  # linkedClone (нужен snapshot в шаблоне) или fullClone.
+  cloneMode: linkedClone
+  # hard, soft или trySoft.
+  powerOffMode: trySoft
+  storagePolicyName: ""
+
+  # Сеть по умолчанию для всех машин. Группа может переопределить целиком.
+  #
+  # DHCP:
+  #   devices:
+  #     - networkName: "/Datacenter/network/VM Network"
+  #       dhcp4: true
+  #
+  # Статический IP:
+  #   * для одной VM проще DHCP-резервация (dhcp4: true, endpoint = reserved IP);
+  #   * для нескольких VM — CAPV IPAM (addressesFromPools) с установленным
+  #     IPAM-провайдером.
+  #
+  # ВАЖНО: CAPV v1beta2 запрещает ipAddrs в VSphereMachineTemplate
+  # (webhook: "cannot be set in templates"). Чарт остановит рендер,
+  # если ipAddrs указан.
+  #
+  # IPAM:
+  #   devices:
+  #     - networkName: "/Datacenter/network/VM Network"
+  #       dhcp4: false
+  #       addressesFromPools:
+  #         - apiGroup: ipam.cluster.x-k8s.io
+  #           kind: InClusterIPPool
+  #           name: workers-pool
+  network:
+    devices:
+      - networkName: "/Datacenter/network/VM Network"
+        dhcp4: true
+
+  # Размер VM по умолчанию. Переопределяется в controlPlane.vm и workerNodes.<group>.vm.
+  vm:
+    numCPUs: 2
+    memoryMiB: 4096
+    diskGiB: 40
+    additionalDisksGiB: []
+
+# -----------------------------------------------------------------------------
+# Control plane (KubeadmControlPlane)
+# -----------------------------------------------------------------------------
+controlPlane:
+  # 1 — минимальная конфигурация без HA.
+  # 3 (или 5) — HA; требуется LB/VIP в cluster.endpoint.host.
+  replicas: 1
+
+  # Переопределения vsphere.* для control plane. Пустые значения => берутся
+  # глобальные. vm мержится с vsphere.vm (поля группы важнее).
+  vm: {}
+  #  vm:
+  #    numCPUs: 4
+  #    memoryMiB: 8192
+  #    diskGiB: 60
+
+  network: {}
+  datacenter: ""
+  datastore: ""
+  folder: ""
+  resourcePool: ""
+  template: ""
+  server: ""
+  thumbprint: ""
+  cloneMode: ""
+  powerOffMode: ""
+  storagePolicyName: ""
+
+  # Метки Node (kubelet --node-labels), например:
+  # labels:
+  #   node-role.kubernetes.io/control-plane: ""
+  labels: {}
+
+  # Дополнительные taints, например:
+  # taints:
+  #   - key: dedicated
+  #     value: control-plane
+  #     effect: NoSchedule
+  taints: []
+
+  # Дополнительные аргументы kubelet (map name => value).
+  kubeletExtraArgs: {}
+
+  # Произвольные поля в spec.template.spec VSphereMachineTemplate.
+  # Мержатся последними и могут переопределить вычисленные значения.
+  # Пример: numCoresPerSocket: 2, resources: {...}, naming: {...}.
+  extraSpec: {}
+
+  # Дополнительные файлы в KubeadmConfigSpec.files.
+  # Формат: path, content, permissions, owner, encoding.
+  extraFiles: []
+
+  # Дополнительные команды до/после kubeadm.
+  extraPreKubeadmCommands: []
+  extraPostKubeadmCommands: []
+
+  deletion:
+    nodeDeletionTimeoutSeconds: 600
+    nodeDrainTimeoutSeconds: 600
+    nodeVolumeDetachTimeoutSeconds: 300
+
+  rollout:
+    maxSurge: 1
+    # RFC3339. Установите время в прошлом/настоящем, чтобы принудительно
+    # пересоздать control plane (например, после изменения vsphere.vm).
+    after: ""
+
+  machineHealthCheck:
+    # Для production обычно включают. По умолчанию выключено, чтобы чарт
+    # не удалял узлы без явного согласия.
+    enabled: false
+    checks:
+      nodeStartupTimeoutSeconds: 600
+      unhealthyNodeConditions:
+        - type: Ready
+          status: "False"
+          timeoutSeconds: 300
+        - type: Ready
+          status: Unknown
+          timeoutSeconds: 300
+    remediation:
+      triggerIf:
+        unhealthyLessThanOrEqualTo: 1
+
+# -----------------------------------------------------------------------------
+# Worker-группы (MachineDeployment)
+#
+# Ключ map — имя группы. Для каждой группы создаются:
+#   MachineDeployment + KubeadmConfigTemplate + VSphereMachineTemplate
+#   (+ MachineHealthCheck, если enabled).
+# -----------------------------------------------------------------------------
+workerNodes:
+  workers:
+    replicas: 1
+
+    vm: {}
+    #  vm:
+    #    numCPUs: 4
+    #    memoryMiB: 8192
+    #    diskGiB: 80
+
+    network: {}
+    datacenter: ""
+    datastore: ""
+    folder: ""
+    resourcePool: ""
+    template: ""
+    server: ""
+    thumbprint: ""
+    cloneMode: ""
+    powerOffMode: ""
+    storagePolicyName: ""
+
+    # Метки Node. Пример:
+    # labels:
+    #   node-role.kubernetes.io/worker: ""
+    #   topology.kubernetes.io/zone: dc-1
+    labels: {}
+
+    # taints:
+    #   - key: dedicated
+    #     value: app
+    #     effect: NoSchedule
+    taints: []
+
+    kubeletExtraArgs: {}
+    extraSpec: {}
+    extraFiles: []
+    extraPreKubeadmCommands: []
+    extraPostKubeadmCommands: []
+
+    deletion:
+      nodeDeletionTimeoutSeconds: 600
+      nodeDrainTimeoutSeconds: 600
+      nodeVolumeDetachTimeoutSeconds: 300
+
+    rollout:
+      maxSurge: 1
+      maxUnavailable: 0
+
+    # Аннотации Machine-шаблона. Изменение любой аннотации запускает
+    # rolling update группы (например, после изменения vm/extraSpec).
+    templateAnnotations: {}
+
+    machineHealthCheck:
+      enabled: false
+      checks:
+        nodeStartupTimeoutSeconds: 600
+        unhealthyNodeConditions:
+          - type: Ready
+            status: "False"
+            timeoutSeconds: 300
+          - type: Ready
+            status: Unknown
+            timeoutSeconds: 300
+      remediation:
+        triggerIf:
+          unhealthyLessThanOrEqualTo: 1
+
+# -----------------------------------------------------------------------------
+# Опциональный kube-vip (static pod на control plane).
+#
+# По умолчанию ВЫКЛЮЧЕН. Если включаете:
+#   * cluster.endpoint.host должен быть свободным IPv4-адресом (VIP);
+#   * control plane и VIP должны быть в одной L2-сети (ARP-режим);
+#   * VIP не должен выдаваться DHCP.
+#
+# Альтернативы без kube-vip: внешний L4 LB, одиночный control plane,
+# keepalived+HAProxy, BGP-анонс VIP. См. README.
+# -----------------------------------------------------------------------------
+kubeVip:
+  enabled: false
+  # В air-gapped среде укажите образ из внутреннего registry,
+  # например r.shturval.tech/kube-vip:v1.2.4-326534.
+  image: "ghcr.io/kube-vip/kube-vip:v1.3.1"
+  imagePullPolicy: IfNotPresent
+  # Сетевой интерфейс на master-узле (часто ens192/ens160 в VMware).
+  # Пусто => kube-vip выбирает интерфейс по default route.
+  interface: ""
+  cidr: 32
+  # Включить kube-vip также как LoadBalancer для Service type=LoadBalancer.
+  services:
+    enabled: false
+  # Дополнительные env-переменные kube-vip.
+  # extraEnv:
+  #   - name: vip_subnet
+  #     value: "24"
+  extraEnv: []
+
+# -----------------------------------------------------------------------------
+# kubeadm
+# -----------------------------------------------------------------------------
+kubeadm:
+  # Репозиторий образов control plane. Пусто => registry.k8s.io (kubeadm default).
+  # Для air-gapped окружений укажите свой registry.
+  imageRepository: ""
+
+  # Не устанавливать kube-proxy (kubeadm skipPhases: addon/kube-proxy).
+  # Включайте, если CNI работает в режиме kube-proxy replacement
+  # (например, Cilium с kubeProxyReplacement=true).
+  skipKubeProxy: false
+
+  apiServer:
+    # Дополнительные аргументы kube-apiserver (map name => value).
+    extraArgs: {}
+    # Дополнительные SAN в сертификат kube-apiserver.
+    certSANs: []
+
+  controllerManager:
+    extraArgs: {}
+
+  scheduler:
+    extraArgs: {}
+
+  etcd:
+    local:
+      dataDir: /var/lib/etcd
+      # Пусто => образ etcd из kubeadm. Для внутреннего registry задайте
+      # imageRepository/imageTag (например, v3.6.14-324917).
+      imageRepository: ""
+      imageTag: ""
+
+  dns:
+    # Пусто => версия CoreDNS по умолчанию для выбранной версии Kubernetes.
+    imageTag: ""
+
+# -----------------------------------------------------------------------------
+# Доступ по SSH на узлы (через KubeadmConfig users).
+# -----------------------------------------------------------------------------
+ssh:
+  enabled: false
+  user: "capv"
+  authorizedKeys: []
+  #  - "ssh-ed25519 AAAA... user@example"
+
+# -----------------------------------------------------------------------------
+# NTP на узлах (KubeadmConfig ntp).
+# -----------------------------------------------------------------------------
+ntp:
+  enabled: false
+  servers: []
+  #  - "ntp1.example.com"
+  #  - "ntp2.example.com"

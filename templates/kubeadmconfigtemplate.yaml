@@ -1,0 +1,53 @@
+{{- range $groupName, $group := .Values.workerNodes }}
+{{- $name := include "capv-cluster.childName" (dict "root" $ "suffix" (printf "-%s" $groupName)) }}
+---
+apiVersion: bootstrap.cluster.x-k8s.io/v1beta2
+kind: KubeadmConfigTemplate
+metadata:
+  name: {{ $name }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    cluster.x-k8s.io/cluster-name: {{ include "capv-cluster.clusterName" $ | quote }}
+    {{- include "capv-cluster.labels" $ | nindent 4 }}
+spec:
+  template:
+    spec:
+      joinConfiguration:
+        nodeRegistration:
+          {{- include "capv-cluster.nodeRegistration" (dict "args" $group.kubeletExtraArgs "labels" $group.labels "taints" $group.taints) | nindent 10 }}
+      {{- $files := include "capv-cluster.kubeadmFiles" (dict "root" $ "kubeVip" false "extraFiles" $group.extraFiles) }}
+      {{- if trim $files }}
+      files:
+{{ $files | trim | indent 8 }}
+      {{- end }}
+      {{- $pre := include "capv-cluster.preKubeadmCommands" (dict "kubeVip" false "extra" $group.extraPreKubeadmCommands) }}
+      {{- if trim $pre }}
+      preKubeadmCommands:
+{{ $pre | trim | indent 8 }}
+      {{- end }}
+      {{- with $group.extraPostKubeadmCommands }}
+      postKubeadmCommands:
+        {{- range . }}
+        - {{ . | quote }}
+        {{- end }}
+      {{- end }}
+      {{- if $.Values.ssh.enabled }}
+      users:
+        - name: {{ $.Values.ssh.user | quote }}
+          sshAuthorizedKeys:
+            {{- range $.Values.ssh.authorizedKeys }}
+            - {{ . | quote }}
+            {{- end }}
+          sudo: ALL=(ALL) NOPASSWD:ALL
+      {{- end }}
+      {{- if $.Values.ntp.enabled }}
+      ntp:
+        enabled: true
+        {{- with $.Values.ntp.servers }}
+        servers:
+          {{- range . }}
+          - {{ . | quote }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+{{- end }}

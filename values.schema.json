@@ -1,0 +1,474 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "capv-cluster values",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "nameOverride": {
+      "type": "string"
+    },
+    "cluster": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "kubernetesVersion": {
+          "type": "string"
+        },
+        "podCIDR": {
+          "type": "string"
+        },
+        "serviceCIDR": {
+          "type": "string"
+        },
+        "serviceDomain": {
+          "type": "string"
+        },
+        "endpoint": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "host": {
+              "type": "string"
+            },
+            "port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535
+            }
+          }
+        }
+      }
+    },
+    "vsphere": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "server": {
+          "type": "string"
+        },
+        "thumbprint": {
+          "type": "string"
+        },
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "credentials": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "create": {
+              "type": "boolean"
+            },
+            "existingSecret": {
+              "type": "string"
+            },
+            "keepOnUninstall": {
+              "type": "boolean"
+            }
+          }
+        },
+        "datacenter": {
+          "type": "string"
+        },
+        "datastore": {
+          "type": "string"
+        },
+        "folder": {
+          "type": "string"
+        },
+        "resourcePool": {
+          "type": "string"
+        },
+        "template": {
+          "type": "string"
+        },
+        "cloneMode": {
+          "type": "string",
+          "enum": [
+            "linkedClone",
+            "fullClone"
+          ]
+        },
+        "powerOffMode": {
+          "type": "string",
+          "enum": [
+            "hard",
+            "soft",
+            "trySoft"
+          ]
+        },
+        "storagePolicyName": {
+          "type": "string"
+        },
+        "network": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "devices": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "vm": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "numCPUs": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "memoryMiB": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "diskGiB": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "additionalDisksGiB": {
+              "type": "array",
+              "items": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "controlPlane": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "replicas": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "vm": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "network": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "taints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "kubeletExtraArgs": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "extraSpec": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "extraFiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "extraPreKubeadmCommands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "extraPostKubeadmCommands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "machineHealthCheck": {
+          "$ref": "#/definitions/machineHealthCheck"
+        },
+        "rollout": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "maxSurge": {
+              "type": [
+                "integer",
+                "string"
+              ]
+            },
+            "after": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "workerNodes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "replicas": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "vm": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "network": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "labels": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "taints": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "kubeletExtraArgs": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "extraSpec": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "extraFiles": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "extraPreKubeadmCommands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "extraPostKubeadmCommands": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "machineHealthCheck": {
+            "$ref": "#/definitions/machineHealthCheck"
+          },
+          "templateAnnotations": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "kubeVip": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "image": {
+          "type": "string"
+        },
+        "imagePullPolicy": {
+          "type": "string"
+        },
+        "interface": {
+          "type": "string"
+        },
+        "cidr": {
+          "type": "integer"
+        },
+        "services": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            }
+          }
+        },
+        "extraEnv": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "value"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "kubeadm": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "imageRepository": {
+          "type": "string"
+        },
+        "apiServer": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "extraArgs": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "certSANs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "controllerManager": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "extraArgs": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "scheduler": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "extraArgs": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        },
+        "etcd": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "local": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "dataDir": {
+                  "type": "string"
+                },
+                "imageRepository": {
+                  "type": "string"
+                },
+                "imageTag": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "dns": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "imageTag": {
+              "type": "string"
+            }
+          }
+        },
+        "skipKubeProxy": {
+          "type": "boolean"
+        }
+      }
+    },
+    "ssh": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "user": {
+          "type": "string"
+        },
+        "authorizedKeys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "ntp": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "servers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "machineHealthCheck": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "checks": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "remediation": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    }
+  }
+}

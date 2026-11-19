@@ -1,0 +1,116 @@
+apiVersion: controlplane.cluster.x-k8s.io/v1beta2
+kind: KubeadmControlPlane
+metadata:
+  name: {{ include "capv-cluster.childName" (dict "root" . "suffix" "-control-plane") }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    cluster.x-k8s.io/cluster-name: {{ include "capv-cluster.clusterName" . | quote }}
+    {{- include "capv-cluster.labels" . | nindent 4 }}
+spec:
+  kubeadmConfigSpec:
+    clusterConfiguration:
+      apiServer:
+        certSANs:
+          - {{ include "capv-cluster.endpointHost" . | quote }}
+          {{- range (.Values.kubeadm.apiServer.certSANs | default list) }}
+          - {{ . | quote }}
+          {{- end }}
+        {{- $apiArgs := include "capv-cluster.kubeadmExtraArgs" (dict "args" .Values.kubeadm.apiServer.extraArgs "root" .) }}
+        {{- if trim $apiArgs }}
+        extraArgs:
+          {{- $apiArgs | trim | nindent 10 }}
+        {{- end }}
+      controlPlaneEndpoint: {{ include "capv-cluster.endpoint" . | quote }}
+      {{- $cmArgs := include "capv-cluster.kubeadmExtraArgs" (dict "args" .Values.kubeadm.controllerManager.extraArgs "root" .) }}
+      {{- if trim $cmArgs }}
+      controllerManager:
+        extraArgs:
+          {{- $cmArgs | trim | nindent 10 }}
+      {{- end }}
+      {{- with .Values.kubeadm.dns.imageTag }}
+      dns:
+        imageTag: {{ . | quote }}
+      {{- end }}
+      etcd:
+        local:
+          dataDir: {{ .Values.kubeadm.etcd.local.dataDir | default "/var/lib/etcd" | quote }}
+          {{- with .Values.kubeadm.etcd.local.imageRepository }}
+          imageRepository: {{ . | quote }}
+          {{- end }}
+          {{- with .Values.kubeadm.etcd.local.imageTag }}
+          imageTag: {{ . | quote }}
+          {{- end }}
+      {{- with .Values.kubeadm.imageRepository }}
+      imageRepository: {{ . | quote }}
+      {{- end }}
+      {{- $schedArgs := include "capv-cluster.kubeadmExtraArgs" (dict "args" .Values.kubeadm.scheduler.extraArgs "root" .) }}
+      {{- if trim $schedArgs }}
+      scheduler:
+        extraArgs:
+          {{- $schedArgs | trim | nindent 10 }}
+      {{- end }}
+    initConfiguration:
+      {{- if .Values.kubeadm.skipKubeProxy }}
+      skipPhases:
+        - addon/kube-proxy
+      {{- end }}
+      nodeRegistration:
+        {{- include "capv-cluster.nodeRegistration" (dict "args" .Values.controlPlane.kubeletExtraArgs "labels" .Values.controlPlane.labels "taints" .Values.controlPlane.taints) | nindent 8 }}
+    joinConfiguration:
+      nodeRegistration:
+        {{- include "capv-cluster.nodeRegistration" (dict "args" .Values.controlPlane.kubeletExtraArgs "labels" .Values.controlPlane.labels "taints" .Values.controlPlane.taints) | nindent 8 }}
+    {{- $files := include "capv-cluster.kubeadmFiles" (dict "root" . "kubeVip" .Values.kubeVip.enabled "extraFiles" .Values.controlPlane.extraFiles) }}
+    {{- if trim $files }}
+    files:
+{{ $files | trim | indent 4 }}
+    {{- end }}
+    {{- $pre := include "capv-cluster.preKubeadmCommands" (dict "kubeVip" .Values.kubeVip.enabled "extra" .Values.controlPlane.extraPreKubeadmCommands) }}
+    {{- if trim $pre }}
+    preKubeadmCommands:
+{{ $pre | trim | indent 4 }}
+    {{- end }}
+    {{- with .Values.controlPlane.extraPostKubeadmCommands }}
+    postKubeadmCommands:
+      {{- range . }}
+      - {{ . | quote }}
+      {{- end }}
+    {{- end }}
+    {{- if .Values.ssh.enabled }}
+    users:
+      - name: {{ .Values.ssh.user | quote }}
+        sshAuthorizedKeys:
+          {{- range .Values.ssh.authorizedKeys }}
+          - {{ . | quote }}
+          {{- end }}
+        sudo: ALL=(ALL) NOPASSWD:ALL
+    {{- end }}
+    {{- if .Values.ntp.enabled }}
+    ntp:
+      enabled: true
+      {{- with .Values.ntp.servers }}
+      servers:
+        {{- range . }}
+        - {{ . | quote }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  machineTemplate:
+    spec:
+      deletion:
+        nodeDeletionTimeoutSeconds: {{ (.Values.controlPlane.deletion | default dict).nodeDeletionTimeoutSeconds | default 600 }}
+        nodeDrainTimeoutSeconds: {{ (.Values.controlPlane.deletion | default dict).nodeDrainTimeoutSeconds | default 600 }}
+        nodeVolumeDetachTimeoutSeconds: {{ (.Values.controlPlane.deletion | default dict).nodeVolumeDetachTimeoutSeconds | default 300 }}
+      infrastructureRef:
+        apiGroup: infrastructure.cluster.x-k8s.io
+        kind: VSphereMachineTemplate
+        name: {{ include "capv-cluster.childName" (dict "root" . "suffix" "-control-plane") }}
+  replicas: {{ .Values.controlPlane.replicas }}
+  rollout:
+    {{- with (.Values.controlPlane.rollout | default dict).after }}
+    after: {{ . | quote }}
+    {{- end }}
+    strategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: {{ (.Values.controlPlane.rollout | default dict).maxSurge | default 1 }}
+  version: v{{ include "capv-cluster.kubernetesVersion" . }}
