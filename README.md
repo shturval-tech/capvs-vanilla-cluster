@@ -423,11 +423,55 @@ workerNodes:
 | `skipKubeProxy` | Не устанавливать kube-proxy (для Cilium kube-proxy replacement) |
 | `apiServer.extraArgs` | Доп. аргументы kube-apiserver |
 | `apiServer.certSANs` | Доп. SAN |
+| `apiServer.imageRepository`, `apiServer.imageTag` | Переопределить образ kube-apiserver |
 | `controllerManager.extraArgs` | Доп. аргументы controller-manager |
+| `controllerManager.imageRepository`, `controllerManager.imageTag` | Переопределить образ kube-controller-manager |
 | `scheduler.extraArgs` | Доп. аргументы scheduler |
 | `etcd.local.dataDir` | Каталог etcd |
 | `etcd.local.imageRepository`, `etcd.local.imageTag` | Переопределить образ etcd (air-gapped) |
 | `dns.imageTag` | Версия CoreDNS (пусто => default kubeadm) |
+
+#### Переопределение образов kube-apiserver и kube-controller-manager
+
+Kubeadm не поддерживает отдельные `imageRepository`/`imageTag` для
+`kube-apiserver` и `kube-controller-manager`: есть только глобальный
+`kubeadm.imageRepository` и версия control plane из
+`cluster.kubernetesVersion`. Поэтому чарт реализует переопределение через
+**kubeadm patches** — strategic merge patch для static Pod манифестов:
+
+```yaml
+kubeadm:
+  # глобальный registry для всех control plane образов
+  imageRepository: r.shturval.tech
+
+  apiServer:
+    imageRepository: registry.example.com/k8s
+    imageTag: v1.36.5
+
+  controllerManager:
+    imageRepository: registry.example.com/k8s
+    imageTag: v1.36.5
+```
+
+Чарт создаёт файлы:
+
+- `/etc/kubernetes/patches/kube-apiserver.yaml`
+- `/etc/kubernetes/patches/kube-controller-manager.yaml`
+
+и указывает `patches.directory` в `initConfiguration`/`joinConfiguration`.
+Если задан только `imageRepository`, тег берётся как `v<cluster.kubernetesVersion>`.
+Если задан только `imageTag`, репозиторий берётся из `kubeadm.imageRepository`
+(или `registry.k8s.io`).
+
+> Не используйте разные версии apiserver и controller-manager без
+> необходимости: control plane рассчитан на одну версию Kubernetes.
+> Переопределение тега имеет смысл для зеркал/патченных образов той же
+> версии.
+>
+> Патчи применяются при bootstrap и join control-plane узлов. После
+> `kubeadm upgrade` проверьте фактические образы в static Pod манифестах;
+> при необходимости пересоздайте control plane через
+> `controlPlane.rollout.after`.
 
 ### `ssh` и `ntp`
 

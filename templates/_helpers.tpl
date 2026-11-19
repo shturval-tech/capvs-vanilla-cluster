@@ -150,6 +150,66 @@ Usage:
 {{- end }}
 
 {{/*
+Effective image for a control plane component.
+Kubeadm has no native per-component image fields, so the chart patches
+the generated static Pod manifests (strategic merge).
+
+Usage:
+  include "capvs-vanilla-cluster.controlPlaneImage" (dict "root" . "component" "kube-apiserver" "override" .Values.kubeadm.apiServer)
+*/}}
+{{- define "capvs-vanilla-cluster.controlPlaneImage" -}}
+{{- $root := .root -}}
+{{- $override := .override | default dict -}}
+{{- $repo := $override.imageRepository | default $root.Values.kubeadm.imageRepository | default "registry.k8s.io" | trimSuffix "/" -}}
+{{- $tag := $override.imageTag | default (printf "v%s" (include "capvs-vanilla-cluster.kubernetesVersion" $root)) -}}
+{{- printf "%s/%s:%s" $repo .component $tag -}}
+{{- end }}
+
+{{/*
+Strategic merge patch for one control plane static Pod.
+*/}}
+{{- define "capvs-vanilla-cluster.controlPlaneImagePatch" -}}
+spec:
+  containers:
+    - name: {{ .component }}
+      image: {{ include "capvs-vanilla-cluster.controlPlaneImage" (dict "root" .root "component" .component "override" .override) | quote }}
+{{- end }}
+
+{{/*
+True if any per-component control plane image override is set.
+*/}}
+{{- define "capvs-vanilla-cluster.hasControlPlaneImagePatches" -}}
+{{- $api := .Values.kubeadm.apiServer | default dict -}}
+{{- $cm := .Values.kubeadm.controllerManager | default dict -}}
+{{- if or $api.imageRepository $api.imageTag $cm.imageRepository $cm.imageTag -}}
+true
+{{- end -}}
+{{- end }}
+
+{{/*
+Kubeadm patch files for kube-apiserver and kube-controller-manager images.
+*/}}
+{{- define "capvs-vanilla-cluster.controlPlaneImagePatches" -}}
+{{- $root := . -}}
+{{- $api := $root.Values.kubeadm.apiServer | default dict -}}
+{{- $cm := $root.Values.kubeadm.controllerManager | default dict -}}
+{{- if or $api.imageRepository $api.imageTag }}
+- path: /etc/kubernetes/patches/kube-apiserver.yaml
+  content: {{ include "capvs-vanilla-cluster.controlPlaneImagePatch" (dict "root" $root "component" "kube-apiserver" "override" $api) | b64enc | quote }}
+  encoding: base64
+  owner: root:root
+  permissions: "0644"
+{{- end }}
+{{- if or $cm.imageRepository $cm.imageTag }}
+- path: /etc/kubernetes/patches/kube-controller-manager.yaml
+  content: {{ include "capvs-vanilla-cluster.controlPlaneImagePatch" (dict "root" $root "component" "kube-controller-manager" "override" $cm) | b64enc | quote }}
+  encoding: base64
+  owner: root:root
+  permissions: "0644"
+{{- end }}
+{{- end }}
+
+{{/*
 VSphereMachineTemplate spec for a group.
 
 Usage:
@@ -226,6 +286,9 @@ Usage:
 - echo "::1         ipv6-localhost ipv6-loopback" > /etc/hosts
 - echo "127.0.0.1   localhost" >> /etc/hosts
 - echo "127.0.0.1   {{ $hostname }}" >> /etc/hosts
+{{- if .controlPlanePatches }}
+- mkdir -p /etc/kubernetes/patches
+{{- end }}
 - systemctl enable --now containerd
 - while ! systemctl is-active --quiet containerd; do echo "Waiting for containerd..."; sleep 2; done
 {{- if .kubeVip }}
@@ -244,6 +307,9 @@ Usage:
   include "capvs-vanilla-cluster.kubeadmFiles" (dict "root" . "kubeVip" true "extraFiles" <list>)
 */}}
 {{- define "capvs-vanilla-cluster.kubeadmFiles" -}}
+{{- if .controlPlane }}
+{{- include "capvs-vanilla-cluster.controlPlaneImagePatches" .root }}
+{{- end }}
 {{- if .kubeVip }}
 - path: /etc/kubernetes/manifests/kube-vip.yaml
   content: {{ tpl (.root.Files.Get "conf/kube-vip.yaml") .root | b64enc | quote }}

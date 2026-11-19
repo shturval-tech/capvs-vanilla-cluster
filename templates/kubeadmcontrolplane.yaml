@@ -50,6 +50,10 @@ spec:
           {{- $schedArgs | trim | nindent 10 }}
       {{- end }}
     initConfiguration:
+      {{- if include "capvs-vanilla-cluster.hasControlPlaneImagePatches" . }}
+      patches:
+        directory: /etc/kubernetes/patches
+      {{- end }}
       {{- if .Values.kubeadm.skipKubeProxy }}
       skipPhases:
         - addon/kube-proxy
@@ -57,14 +61,18 @@ spec:
       nodeRegistration:
         {{- include "capvs-vanilla-cluster.nodeRegistration" (dict "args" .Values.controlPlane.kubeletExtraArgs "labels" .Values.controlPlane.labels "taints" .Values.controlPlane.taints) | nindent 8 }}
     joinConfiguration:
+      {{- if include "capvs-vanilla-cluster.hasControlPlaneImagePatches" . }}
+      patches:
+        directory: /etc/kubernetes/patches
+      {{- end }}
       nodeRegistration:
         {{- include "capvs-vanilla-cluster.nodeRegistration" (dict "args" .Values.controlPlane.kubeletExtraArgs "labels" .Values.controlPlane.labels "taints" .Values.controlPlane.taints) | nindent 8 }}
-    {{- $files := include "capvs-vanilla-cluster.kubeadmFiles" (dict "root" . "kubeVip" .Values.kubeVip.enabled "extraFiles" .Values.controlPlane.extraFiles) }}
+    {{- $files := include "capvs-vanilla-cluster.kubeadmFiles" (dict "root" . "controlPlane" true "kubeVip" .Values.kubeVip.enabled "extraFiles" .Values.controlPlane.extraFiles) }}
     {{- if trim $files }}
     files:
 {{ $files | trim | indent 4 }}
     {{- end }}
-    {{- $pre := include "capvs-vanilla-cluster.preKubeadmCommands" (dict "kubeVip" .Values.kubeVip.enabled "extra" .Values.controlPlane.extraPreKubeadmCommands) }}
+    {{- $pre := include "capvs-vanilla-cluster.preKubeadmCommands" (dict "kubeVip" .Values.kubeVip.enabled "controlPlanePatches" (include "capvs-vanilla-cluster.hasControlPlaneImagePatches" .) "extra" .Values.controlPlane.extraPreKubeadmCommands) }}
     {{- if trim $pre }}
     preKubeadmCommands:
 {{ $pre | trim | indent 4 }}
