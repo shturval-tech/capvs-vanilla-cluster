@@ -1,19 +1,19 @@
 apiVersion: infrastructure.cluster.x-k8s.io/v1beta2
 kind: VSphereCluster
 metadata:
-  name: {{ include "capv-cluster.clusterName" . }}
+  name: {{ include "capvs-vanilla-cluster.clusterName" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    cluster.x-k8s.io/cluster-name: {{ include "capv-cluster.clusterName" . | quote }}
-    {{- include "capv-cluster.labels" . | nindent 4 }}
+    cluster.x-k8s.io/cluster-name: {{ include "capvs-vanilla-cluster.clusterName" . | quote }}
+    {{- include "capvs-vanilla-cluster.labels" . | nindent 4 }}
 spec:
   server: {{ required "vsphere.server is required" .Values.vsphere.server | quote }}
   {{- with .Values.vsphere.thumbprint }}
   thumbprint: {{ . | quote }}
   {{- end }}
   controlPlaneEndpoint:
-    host: {{ include "capv-cluster.endpointHost" . | quote }}
-    port: {{ include "capv-cluster.endpointPort" . }}
+    host: {{ include "capvs-vanilla-cluster.endpointHost" . | quote }}
+    port: {{ include "capvs-vanilla-cluster.endpointPort" . }}
   identityRef:
     kind: Secret
-    name: {{ include "capv-cluster.credentialsSecretName" . }}
+    name: {{ include "capvs-vanilla-cluster.credentialsSecretName" . }}

@@ -1,5 +1,5 @@
 {{- range $groupName, $group := .Values.workerNodes }}
-{{- $name := include "capv-cluster.childName" (dict "root" $ "suffix" (printf "-%s" $groupName)) }}
+{{- $name := include "capvs-vanilla-cluster.childName" (dict "root" $ "suffix" (printf "-%s" $groupName)) }}
 ---
 apiVersion: cluster.x-k8s.io/v1beta2
 kind: MachineDeployment
@@ -7,28 +7,28 @@ metadata:
   name: {{ $name }}
   namespace: {{ $.Release.Namespace }}
   labels:
-    cluster.x-k8s.io/cluster-name: {{ include "capv-cluster.clusterName" $ | quote }}
+    cluster.x-k8s.io/cluster-name: {{ include "capvs-vanilla-cluster.clusterName" $ | quote }}
     cluster.x-k8s.io/deployment-name: {{ $name | quote }}
-    {{- include "capv-cluster.labels" $ | nindent 4 }}
+    {{- include "capvs-vanilla-cluster.labels" $ | nindent 4 }}
 spec:
-  clusterName: {{ include "capv-cluster.clusterName" $ | quote }}
+  clusterName: {{ include "capvs-vanilla-cluster.clusterName" $ | quote }}
   replicas: {{ $group.replicas | default 0 }}
   selector:
     matchLabels:
-      cluster.x-k8s.io/cluster-name: {{ include "capv-cluster.clusterName" $ | quote }}
+      cluster.x-k8s.io/cluster-name: {{ include "capvs-vanilla-cluster.clusterName" $ | quote }}
       cluster.x-k8s.io/deployment-name: {{ $name | quote }}
   template:
     metadata:
       labels:
-        cluster.x-k8s.io/cluster-name: {{ include "capv-cluster.clusterName" $ | quote }}
+        cluster.x-k8s.io/cluster-name: {{ include "capvs-vanilla-cluster.clusterName" $ | quote }}
         cluster.x-k8s.io/deployment-name: {{ $name | quote }}
       {{- with $group.templateAnnotations }}
       annotations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
     spec:
-      clusterName: {{ include "capv-cluster.clusterName" $ | quote }}
-      version: v{{ include "capv-cluster.kubernetesVersion" $ }}
+      clusterName: {{ include "capvs-vanilla-cluster.clusterName" $ | quote }}
+      version: v{{ include "capvs-vanilla-cluster.kubernetesVersion" $ }}
       bootstrap:
         configRef:
           apiGroup: bootstrap.cluster.x-k8s.io

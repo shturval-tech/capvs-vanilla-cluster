@@ -1,12 +1,12 @@
-{{- include "capv-cluster.validate" . }}
+{{- include "capvs-vanilla-cluster.validate" . }}
 apiVersion: cluster.x-k8s.io/v1beta2
 kind: Cluster
 metadata:
-  name: {{ include "capv-cluster.clusterName" . }}
+  name: {{ include "capvs-vanilla-cluster.clusterName" . }}
   namespace: {{ .Release.Namespace }}
   labels:
-    cluster.x-k8s.io/cluster-name: {{ include "capv-cluster.clusterName" . | quote }}
-    {{- include "capv-cluster.labels" . | nindent 4 }}
+    cluster.x-k8s.io/cluster-name: {{ include "capvs-vanilla-cluster.clusterName" . | quote }}
+    {{- include "capvs-vanilla-cluster.labels" . | nindent 4 }}
 spec:
   clusterNetwork:
     apiServerPort: 6443
@@ -18,13 +18,13 @@ spec:
         - {{ required "cluster.serviceCIDR is required" .Values.cluster.serviceCIDR | quote }}
     serviceDomain: {{ required "cluster.serviceDomain is required" .Values.cluster.serviceDomain | quote }}
   controlPlaneEndpoint:
-    host: {{ include "capv-cluster.endpointHost" . | quote }}
-    port: {{ include "capv-cluster.endpointPort" . }}
+    host: {{ include "capvs-vanilla-cluster.endpointHost" . | quote }}
+    port: {{ include "capvs-vanilla-cluster.endpointPort" . }}
   controlPlaneRef:
     apiGroup: controlplane.cluster.x-k8s.io
     kind: KubeadmControlPlane
-    name: {{ include "capv-cluster.childName" (dict "root" . "suffix" "-control-plane") }}
+    name: {{ include "capvs-vanilla-cluster.childName" (dict "root" . "suffix" "-control-plane") }}
   infrastructureRef:
     apiGroup: infrastructure.cluster.x-k8s.io
     kind: VSphereCluster
-    name: {{ include "capv-cluster.clusterName" . }}
+    name: {{ include "capvs-vanilla-cluster.clusterName" . }}

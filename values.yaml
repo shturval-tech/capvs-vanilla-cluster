@@ -1,5 +1,5 @@
 # =============================================================================
-# capv-cluster — «чистый» Cluster API + CAPV кластер.
+# capvs-vanilla-cluster — «чистый» Cluster API + CAPV кластер.
 #
 # Чарт создаёт только объекты Cluster API / CAPV.
 #

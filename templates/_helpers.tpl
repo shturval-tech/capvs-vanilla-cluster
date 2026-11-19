@@ -1,23 +1,23 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "capv-cluster.name" -}}
+{{- define "capvs-vanilla-cluster.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Chart label.
 */}}
-{{- define "capv-cluster.chart" -}}
+{{- define "capvs-vanilla-cluster.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels.
 */}}
-{{- define "capv-cluster.labels" -}}
-helm.sh/chart: {{ include "capv-cluster.chart" . }}
-{{ include "capv-cluster.selectorLabels" . }}
+{{- define "capvs-vanilla-cluster.labels" -}}
+helm.sh/chart: {{ include "capvs-vanilla-cluster.chart" . }}
+{{ include "capvs-vanilla-cluster.selectorLabels" . }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
@@ -27,57 +27,57 @@ app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{/*
 Selector labels.
 */}}
-{{- define "capv-cluster.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "capv-cluster.name" . }}
+{{- define "capvs-vanilla-cluster.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "capvs-vanilla-cluster.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 CAPI cluster name. Defaults to the Helm release name.
 */}}
-{{- define "capv-cluster.clusterName" -}}
+{{- define "capvs-vanilla-cluster.clusterName" -}}
 {{- default .Release.Name .Values.cluster.name | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Child resource name: <clusterName><suffix>, truncated to 63 characters.
 Usage:
-  include "capv-cluster.childName" (dict "root" . "suffix" "-control-plane")
+  include "capvs-vanilla-cluster.childName" (dict "root" . "suffix" "-control-plane")
 */}}
-{{- define "capv-cluster.childName" -}}
+{{- define "capvs-vanilla-cluster.childName" -}}
 {{- $suffix := .suffix | toString -}}
 {{- $max := sub 63 (len $suffix) | int -}}
-{{- $base := include "capv-cluster.clusterName" .root | trunc $max | trimSuffix "-" -}}
+{{- $base := include "capvs-vanilla-cluster.clusterName" .root | trunc $max | trimSuffix "-" -}}
 {{- printf "%s%s" $base $suffix -}}
 {{- end }}
 
 {{/*
 Kubernetes version without the leading "v".
 */}}
-{{- define "capv-cluster.kubernetesVersion" -}}
+{{- define "capvs-vanilla-cluster.kubernetesVersion" -}}
 {{- .Values.cluster.kubernetesVersion | default .Chart.AppVersion | toString | trimPrefix "v" }}
 {{- end }}
 
 {{/*
 API endpoint host: LB address, VIP or a single control-plane node IP.
 */}}
-{{- define "capv-cluster.endpointHost" -}}
+{{- define "capvs-vanilla-cluster.endpointHost" -}}
 {{- required "cluster.endpoint.host is required. Set an external load-balancer address, a kube-vip VIP, or the static IP of a single control-plane node." .Values.cluster.endpoint.host }}
 {{- end }}
 
 {{/*
 API endpoint port.
 */}}
-{{- define "capv-cluster.endpointPort" -}}
+{{- define "capvs-vanilla-cluster.endpointPort" -}}
 {{- default 6443 .Values.cluster.endpoint.port | int }}
 {{- end }}
 
 {{/*
 API endpoint in host:port form (IPv6-safe).
 */}}
-{{- define "capv-cluster.endpoint" -}}
-{{- $host := include "capv-cluster.endpointHost" . -}}
-{{- $port := include "capv-cluster.endpointPort" . | int -}}
+{{- define "capvs-vanilla-cluster.endpoint" -}}
+{{- $host := include "capvs-vanilla-cluster.endpointHost" . -}}
+{{- $port := include "capvs-vanilla-cluster.endpointPort" . | int -}}
 {{- if contains ":" $host -}}
 {{- printf "[%s]:%d" $host $port -}}
 {{- else -}}
@@ -88,18 +88,18 @@ API endpoint in host:port form (IPv6-safe).
 {{/*
 Secret with vCenter credentials. Created by the chart or supplied by the user.
 */}}
-{{- define "capv-cluster.credentialsSecretName" -}}
+{{- define "capvs-vanilla-cluster.credentialsSecretName" -}}
 {{- if .Values.vsphere.credentials.existingSecret -}}
 {{- .Values.vsphere.credentials.existingSecret -}}
 {{- else -}}
-{{- printf "%s-vsphere-credentials" (include "capv-cluster.clusterName" .) | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-vsphere-credentials" (include "capvs-vanilla-cluster.clusterName" .) | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end }}
 
 {{/*
 Comma-separated node labels for kubelet --node-labels.
 */}}
-{{- define "capv-cluster.nodeLabels" -}}
+{{- define "capvs-vanilla-cluster.nodeLabels" -}}
 {{- $labels := .labels | default dict -}}
 {{- $pairs := list -}}
 {{- range $k, $v := $labels -}}
@@ -112,13 +112,13 @@ Comma-separated node labels for kubelet --node-labels.
 nodeRegistration block shared by initConfiguration and joinConfiguration.
 
 Usage:
-  include "capv-cluster.nodeRegistration" (dict "args" <map> "labels" <map> "taints" <list>)
+  include "capvs-vanilla-cluster.nodeRegistration" (dict "args" <map> "labels" <map> "taints" <list>)
 */}}
-{{- define "capv-cluster.nodeRegistration" -}}
+{{- define "capvs-vanilla-cluster.nodeRegistration" -}}
 {{- $args := deepCopy (.args | default dict) -}}
 {{- $labels := .labels | default dict -}}
 {{- if and $labels (not (hasKey $args "node-labels")) -}}
-{{- $_ := set $args "node-labels" (include "capv-cluster.nodeLabels" (dict "labels" $labels)) -}}
+{{- $_ := set $args "node-labels" (include "capvs-vanilla-cluster.nodeLabels" (dict "labels" $labels)) -}}
 {{- end -}}
 criSocket: unix:///var/run/containerd/containerd.sock
 imagePullPolicy: IfNotPresent
@@ -139,9 +139,9 @@ taints:
 kubeadm extraArgs list from a map.
 
 Usage:
-  include "capv-cluster.kubeadmExtraArgs" (dict "args" .Values.kubeadm.apiServer.extraArgs "root" .)
+  include "capvs-vanilla-cluster.kubeadmExtraArgs" (dict "args" .Values.kubeadm.apiServer.extraArgs "root" .)
 */}}
-{{- define "capv-cluster.kubeadmExtraArgs" -}}
+{{- define "capvs-vanilla-cluster.kubeadmExtraArgs" -}}
 {{- $root := .root -}}
 {{- range $k, $v := (.args | default dict) }}
 - name: {{ $k }}
@@ -153,9 +153,9 @@ Usage:
 VSphereMachineTemplate spec for a group.
 
 Usage:
-  include "capv-cluster.machineSpec" (dict "root" . "group" .Values.controlPlane "name" "control-plane")
+  include "capvs-vanilla-cluster.machineSpec" (dict "root" . "group" .Values.controlPlane "name" "control-plane")
 */}}
-{{- define "capv-cluster.machineSpec" -}}
+{{- define "capvs-vanilla-cluster.machineSpec" -}}
 {{- $root := .root -}}
 {{- $group := .group | default dict -}}
 {{- $name := .name | default "machine" -}}
@@ -218,9 +218,9 @@ When kube-vip is enabled, run the prepare scripts written to
 /etc/pre-kubeadm-commands (same workaround as upstream CAPV templates).
 
 Usage:
-  include "capv-cluster.preKubeadmCommands" (dict "kubeVip" true "extra" <list>)
+  include "capvs-vanilla-cluster.preKubeadmCommands" (dict "kubeVip" true "extra" <list>)
 */}}
-{{- define "capv-cluster.preKubeadmCommands" -}}
+{{- define "capvs-vanilla-cluster.preKubeadmCommands" -}}
 {{- $hostname := "{{ ds.meta_data.hostname }}" -}}
 - hostnamectl set-hostname "{{ $hostname }}"
 - echo "::1         ipv6-localhost ipv6-loopback" > /etc/hosts
@@ -241,9 +241,9 @@ Usage:
 KubeadmConfigSpec.files. Includes kube-vip files (optional) and user extras.
 
 Usage:
-  include "capv-cluster.kubeadmFiles" (dict "root" . "kubeVip" true "extraFiles" <list>)
+  include "capvs-vanilla-cluster.kubeadmFiles" (dict "root" . "kubeVip" true "extraFiles" <list>)
 */}}
-{{- define "capv-cluster.kubeadmFiles" -}}
+{{- define "capvs-vanilla-cluster.kubeadmFiles" -}}
 {{- if .kubeVip }}
 - path: /etc/kubernetes/manifests/kube-vip.yaml
   content: {{ tpl (.root.Files.Get "conf/kube-vip.yaml") .root | b64enc | quote }}
@@ -281,8 +281,8 @@ Usage:
 {{/*
 Validation shared by all templates.
 */}}
-{{- define "capv-cluster.validate" -}}
-{{- $clusterName := include "capv-cluster.clusterName" . -}}
+{{- define "capvs-vanilla-cluster.validate" -}}
+{{- $clusterName := include "capvs-vanilla-cluster.clusterName" . -}}
 {{- if not (regexMatch "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" $clusterName) -}}
 {{- fail (printf "cluster.name %q must be a DNS label (lowercase alphanumeric and '-')" $clusterName) -}}
 {{- end -}}
@@ -308,12 +308,12 @@ Validation shared by all templates.
 {{- fail "vsphere.credentials.create=false requires vsphere.credentials.existingSecret" -}}
 {{- end -}}
 {{- if .Values.kubeVip.enabled -}}
-{{- $host := include "capv-cluster.endpointHost" . -}}
+{{- $host := include "capvs-vanilla-cluster.endpointHost" . -}}
 {{- $ipv4 := "^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])(\\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])){3}$" -}}
 {{- if not (regexMatch $ipv4 $host) -}}
 {{- fail "kubeVip.enabled requires cluster.endpoint.host to be an IPv4 VIP address (ARP mode)" -}}
 {{- end -}}
-{{- if ne (int (include "capv-cluster.endpointPort" .)) 6443 -}}
+{{- if ne (int (include "capvs-vanilla-cluster.endpointPort" .)) 6443 -}}
 {{- fail "kubeVip.enabled requires cluster.endpoint.port to be 6443 (kube-vip does not proxy ports)" -}}
 {{- end -}}
 {{- end -}}

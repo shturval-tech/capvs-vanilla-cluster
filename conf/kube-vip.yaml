@@ -18,7 +18,7 @@ spec:
         - name: vip_arp
           value: "true"
         - name: port
-          value: {{ include "capv-cluster.endpointPort" . | quote }}
+          value: {{ include "capvs-vanilla-cluster.endpointPort" . | quote }}
         {{- with .Values.kubeVip.interface }}
         - name: vip_interface
           value: {{ . | quote }}
@@ -48,7 +48,7 @@ spec:
         - name: vip_retryperiod
           value: "2"
         - name: address
-          value: {{ include "capv-cluster.endpointHost" . | quote }}
+          value: {{ include "capvs-vanilla-cluster.endpointHost" . | quote }}
         - name: prometheus_server
           value: :2112
         {{- range (.Values.kubeVip.extraEnv | default list) }}

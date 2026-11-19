@@ -1,5 +1,5 @@
 apiVersion: v2
-name: capv-cluster
+name: capvs-vanilla-cluster
 description: >-
   Vanilla Cluster API (CAPI) + Cluster API Provider vSphere (CAPV) workload
   cluster.

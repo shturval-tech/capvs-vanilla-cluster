@@ -1,23 +1,23 @@
-Кластер {{ include "capv-cluster.clusterName" . }} создаётся в namespace {{ .Release.Namespace }}.
+Кластер {{ include "capvs-vanilla-cluster.clusterName" . }} создаётся в namespace {{ .Release.Namespace }}.
 
 Проверить статус:
-  kubectl -n {{ .Release.Namespace }} get cluster {{ include "capv-cluster.clusterName" . }} -w
+  kubectl -n {{ .Release.Namespace }} get cluster {{ include "capvs-vanilla-cluster.clusterName" . }} -w
   kubectl -n {{ .Release.Namespace }} get kubeadmcontrolplane,machinedeployment,machine
 
 Получить kubeconfig (создаёт Cluster API):
-  kubectl -n {{ .Release.Namespace }} get secret {{ include "capv-cluster.clusterName" . }}-kubeconfig \
-    -o jsonpath='{.data.value}' | base64 -d > {{ include "capv-cluster.clusterName" . }}.kubeconfig
+  kubectl -n {{ .Release.Namespace }} get secret {{ include "capvs-vanilla-cluster.clusterName" . }}-kubeconfig \
+    -o jsonpath='{.data.value}' | base64 -d > {{ include "capvs-vanilla-cluster.clusterName" . }}.kubeconfig
 
 Дальше установите CNI — без него узлы останутся NotReady:
-  export KUBECONFIG={{ include "capv-cluster.clusterName" . }}.kubeconfig
+  export KUBECONFIG={{ include "capvs-vanilla-cluster.clusterName" . }}.kubeconfig
   # Cilium, Calico или Flannel — на выбор. Пример:
   # helm repo add cilium https://helm.cilium.io/
   # helm install cilium cilium/cilium -n kube-system --set ipam.mode=kubernetes \
-  #   --set k8sServiceHost={{ include "capv-cluster.endpointHost" . }} \
-  #   --set k8sServicePort={{ include "capv-cluster.endpointPort" . }}
+  #   --set k8sServiceHost={{ include "capvs-vanilla-cluster.endpointHost" . }} \
+  #   --set k8sServicePort={{ include "capvs-vanilla-cluster.endpointPort" . }}
 
 Проверка:
-  kubectl --kubeconfig {{ include "capv-cluster.clusterName" . }}.kubeconfig get nodes -o wide
+  kubectl --kubeconfig {{ include "capvs-vanilla-cluster.clusterName" . }}.kubeconfig get nodes -o wide
 
 Важно:
   * чарт не ставит CNI/CSI/CPI и не устанавливает kube-vip, если kubeVip.enabled=false;

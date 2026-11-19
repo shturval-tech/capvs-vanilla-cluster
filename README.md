@@ -1,4 +1,4 @@
-# capv-cluster
+# capvs-vanilla-cluster
 
 Helm-чарт для создания workload-кластера Kubernetes через **чистый (vanilla)
 Cluster API** и **CAPV** (Cluster API Provider vSphere).
@@ -124,7 +124,7 @@ control-plane узле, поэтому отдельный балансировщ
 Установка:
 
 ```bash
-helm upgrade --install demo ./charts-cluster/capv-cluster \
+helm upgrade --install demo ./charts-cluster/capvs-vanilla-cluster \
   -n capi-demo --create-namespace \
   -f my-values.yaml
 ```
@@ -608,7 +608,7 @@ cluster:
 - control plane — задайте `controlPlane.rollout.after` (RFC3339, например
   текущее время) и сделайте `helm upgrade`;
 - worker-группа — измените `workerNodes.<group>.templateAnnotations`
-  (например, `capi.capv-cluster/rollout: "2026-11-18"`) и сделайте
+  (например, `capi.capvs-vanilla-cluster/rollout: "2026-11-18"`) и сделайте
   `helm upgrade`.
 
 После rollout можно убрать/обновить значение.
@@ -643,7 +643,7 @@ kubectl -n capi-demo get machines
 
 ## Отличия от `capvs-cluster` (Штурвал)
 
-| `capvs-cluster` | `capv-cluster` |
+| `capvs-cluster` | `capvs-vanilla-cluster` |
 |---|---|
 | `ClusterConfig`, `InfrastructureProvider` | нет |
 | `shturvald`, NCI, `nci.json` | нет |

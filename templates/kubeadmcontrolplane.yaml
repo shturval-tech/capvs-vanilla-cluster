@@ -1,27 +1,27 @@
 apiVersion: controlplane.cluster.x-k8s.io/v1beta2
 kind: KubeadmControlPlane
 metadata:
-  name: {{ include "capv-cluster.childName" (dict "root" . "suffix" "-control-plane") }}
+  name: {{ include "capvs-vanilla-cluster.childName" (dict "root" . "suffix" "-control-plane") }}
   namespace: {{ .Release.Namespace }}
   labels:
-    cluster.x-k8s.io/cluster-name: {{ include "capv-cluster.clusterName" . | quote }}
-    {{- include "capv-cluster.labels" . | nindent 4 }}
+    cluster.x-k8s.io/cluster-name: {{ include "capvs-vanilla-cluster.clusterName" . | quote }}
+    {{- include "capvs-vanilla-cluster.labels" . | nindent 4 }}
 spec:
   kubeadmConfigSpec:
     clusterConfiguration:
       apiServer:
         certSANs:
-          - {{ include "capv-cluster.endpointHost" . | quote }}
+          - {{ include "capvs-vanilla-cluster.endpointHost" . | quote }}
           {{- range (.Values.kubeadm.apiServer.certSANs | default list) }}
           - {{ . | quote }}
           {{- end }}
-        {{- $apiArgs := include "capv-cluster.kubeadmExtraArgs" (dict "args" .Values.kubeadm.apiServer.extraArgs "root" .) }}
+        {{- $apiArgs := include "capvs-vanilla-cluster.kubeadmExtraArgs" (dict "args" .Values.kubeadm.apiServer.extraArgs "root" .) }}
         {{- if trim $apiArgs }}
         extraArgs:
           {{- $apiArgs | trim | nindent 10 }}
         {{- end }}
-      controlPlaneEndpoint: {{ include "capv-cluster.endpoint" . | quote }}
-      {{- $cmArgs := include "capv-cluster.kubeadmExtraArgs" (dict "args" .Values.kubeadm.controllerManager.extraArgs "root" .) }}
+      controlPlaneEndpoint: {{ include "capvs-vanilla-cluster.endpoint" . | quote }}
+      {{- $cmArgs := include "capvs-vanilla-cluster.kubeadmExtraArgs" (dict "args" .Values.kubeadm.controllerManager.extraArgs "root" .) }}
       {{- if trim $cmArgs }}
       controllerManager:
         extraArgs:
@@ -43,7 +43,7 @@ spec:
       {{- with .Values.kubeadm.imageRepository }}
       imageRepository: {{ . | quote }}
       {{- end }}
-      {{- $schedArgs := include "capv-cluster.kubeadmExtraArgs" (dict "args" .Values.kubeadm.scheduler.extraArgs "root" .) }}
+      {{- $schedArgs := include "capvs-vanilla-cluster.kubeadmExtraArgs" (dict "args" .Values.kubeadm.scheduler.extraArgs "root" .) }}
       {{- if trim $schedArgs }}
       scheduler:
         extraArgs:
@@ -55,16 +55,16 @@ spec:
         - addon/kube-proxy
       {{- end }}
       nodeRegistration:
-        {{- include "capv-cluster.nodeRegistration" (dict "args" .Values.controlPlane.kubeletExtraArgs "labels" .Values.controlPlane.labels "taints" .Values.controlPlane.taints) | nindent 8 }}
+        {{- include "capvs-vanilla-cluster.nodeRegistration" (dict "args" .Values.controlPlane.kubeletExtraArgs "labels" .Values.controlPlane.labels "taints" .Values.controlPlane.taints) | nindent 8 }}
     joinConfiguration:
       nodeRegistration:
-        {{- include "capv-cluster.nodeRegistration" (dict "args" .Values.controlPlane.kubeletExtraArgs "labels" .Values.controlPlane.labels "taints" .Values.controlPlane.taints) | nindent 8 }}
-    {{- $files := include "capv-cluster.kubeadmFiles" (dict "root" . "kubeVip" .Values.kubeVip.enabled "extraFiles" .Values.controlPlane.extraFiles) }}
+        {{- include "capvs-vanilla-cluster.nodeRegistration" (dict "args" .Values.controlPlane.kubeletExtraArgs "labels" .Values.controlPlane.labels "taints" .Values.controlPlane.taints) | nindent 8 }}
+    {{- $files := include "capvs-vanilla-cluster.kubeadmFiles" (dict "root" . "kubeVip" .Values.kubeVip.enabled "extraFiles" .Values.controlPlane.extraFiles) }}
     {{- if trim $files }}
     files:
 {{ $files | trim | indent 4 }}
     {{- end }}
-    {{- $pre := include "capv-cluster.preKubeadmCommands" (dict "kubeVip" .Values.kubeVip.enabled "extra" .Values.controlPlane.extraPreKubeadmCommands) }}
+    {{- $pre := include "capvs-vanilla-cluster.preKubeadmCommands" (dict "kubeVip" .Values.kubeVip.enabled "extra" .Values.controlPlane.extraPreKubeadmCommands) }}
     {{- if trim $pre }}
     preKubeadmCommands:
 {{ $pre | trim | indent 4 }}
@@ -103,7 +103,7 @@ spec:
       infrastructureRef:
         apiGroup: infrastructure.cluster.x-k8s.io
         kind: VSphereMachineTemplate
-        name: {{ include "capv-cluster.childName" (dict "root" . "suffix" "-control-plane") }}
+        name: {{ include "capvs-vanilla-cluster.childName" (dict "root" . "suffix" "-control-plane") }}
   replicas: {{ .Values.controlPlane.replicas }}
   rollout:
     {{- with (.Values.controlPlane.rollout | default dict).after }}
@@ -113,4 +113,4 @@ spec:
       type: RollingUpdate
       rollingUpdate:
         maxSurge: {{ (.Values.controlPlane.rollout | default dict).maxSurge | default 1 }}
-  version: v{{ include "capv-cluster.kubernetesVersion" . }}
+  version: v{{ include "capvs-vanilla-cluster.kubernetesVersion" . }}
