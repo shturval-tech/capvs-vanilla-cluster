@@ -361,9 +361,6 @@
                 "type": "string"
               }
             },
-            "imageRepository": {
-              "type": "string"
-            },
             "imageTag": {
               "type": "string"
             }
@@ -376,9 +373,6 @@
             "extraArgs": {
               "type": "object",
               "additionalProperties": true
-            },
-            "imageRepository": {
-              "type": "string"
             },
             "imageTag": {
               "type": "string"

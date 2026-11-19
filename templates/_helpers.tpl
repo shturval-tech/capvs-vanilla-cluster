@@ -151,8 +151,9 @@ Usage:
 
 {{/*
 Effective image for a control plane component.
-Kubeadm has no native per-component image fields, so the chart patches
-the generated static Pod manifests (strategic merge).
+The registry is always the global kubeadm.imageRepository; only the tag
+is overridable per component. Kubeadm has no native per-component image
+tag field, so the chart patches the generated static Pod manifests.
 
 Usage:
   include "capvs-vanilla-cluster.controlPlaneImage" (dict "root" . "component" "kube-apiserver" "override" .Values.kubeadm.apiServer)
@@ -160,7 +161,7 @@ Usage:
 {{- define "capvs-vanilla-cluster.controlPlaneImage" -}}
 {{- $root := .root -}}
 {{- $override := .override | default dict -}}
-{{- $repo := $override.imageRepository | default $root.Values.kubeadm.imageRepository | default "registry.k8s.io" | trimSuffix "/" -}}
+{{- $repo := $root.Values.kubeadm.imageRepository | default "registry.k8s.io" | trimSuffix "/" -}}
 {{- $tag := $override.imageTag | default (printf "v%s" (include "capvs-vanilla-cluster.kubernetesVersion" $root)) -}}
 {{- printf "%s/%s:%s" $repo .component $tag -}}
 {{- end }}
@@ -181,7 +182,7 @@ True if any per-component control plane image override is set.
 {{- define "capvs-vanilla-cluster.hasControlPlaneImagePatches" -}}
 {{- $api := .Values.kubeadm.apiServer | default dict -}}
 {{- $cm := .Values.kubeadm.controllerManager | default dict -}}
-{{- if or $api.imageRepository $api.imageTag $cm.imageRepository $cm.imageTag -}}
+{{- if or $api.imageTag $cm.imageTag -}}
 true
 {{- end -}}
 {{- end }}
@@ -193,14 +194,14 @@ Kubeadm patch files for kube-apiserver and kube-controller-manager images.
 {{- $root := . -}}
 {{- $api := $root.Values.kubeadm.apiServer | default dict -}}
 {{- $cm := $root.Values.kubeadm.controllerManager | default dict -}}
-{{- if or $api.imageRepository $api.imageTag }}
+{{- if $api.imageTag }}
 - path: /etc/kubernetes/patches/kube-apiserver.yaml
   content: {{ include "capvs-vanilla-cluster.controlPlaneImagePatch" (dict "root" $root "component" "kube-apiserver" "override" $api) | b64enc | quote }}
   encoding: base64
   owner: root:root
   permissions: "0644"
 {{- end }}
-{{- if or $cm.imageRepository $cm.imageTag }}
+{{- if $cm.imageTag }}
 - path: /etc/kubernetes/patches/kube-controller-manager.yaml
   content: {{ include "capvs-vanilla-cluster.controlPlaneImagePatch" (dict "root" $root "component" "kube-controller-manager" "override" $cm) | b64enc | quote }}
   encoding: base64

@@ -317,17 +317,17 @@ kubeadm:
     extraArgs: {}
     # Дополнительные SAN в сертификат kube-apiserver.
     certSANs: []
-    # Переопределение образа kube-apiserver. Kubeadm не имеет отдельных
-    # полей imageRepository/imageTag для apiserver, поэтому чарт создаёт
-    # kubeadm patch /etc/kubernetes/patches/kube-apiserver.yaml.
-    # Пусто => kubeadm.imageRepository + версия из cluster.kubernetesVersion.
-    imageRepository: ""
+    # Тег образа kube-apiserver. Registry всегда берётся из
+    # kubeadm.imageRepository (или registry.k8s.io).
+    # Пусто => v<cluster.kubernetesVersion>.
+    # Kubeadm не имеет отдельного поля imageTag для apiserver, поэтому
+    # чарт создаёт patch /etc/kubernetes/patches/kube-apiserver.yaml.
     imageTag: ""
 
   controllerManager:
     extraArgs: {}
-    # Переопределение образа kube-controller-manager (аналогично apiServer).
-    imageRepository: ""
+    # Тег образа kube-controller-manager (registry — общий kubeadm.imageRepository).
+    # Пусто => v<cluster.kubernetesVersion>.
     imageTag: ""
 
   scheduler:
